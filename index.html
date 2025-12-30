@@ -107,12 +107,63 @@
         .border-gold { border-left-color: var(--gold); }
         .border-silver { border-left-color: var(--silver); }
 
+        /* --- NOUVEAUX STYLES INPUT POINTS --- */
+        .game-inputs-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .input-point {
+            width: 70px; /* Largeur fixe */
+            padding: 8px 0;
+            margin: 0 !important; /* Overwrite global input margin */
+            text-align: center;
+            font-size: 20px;
+            font-weight: 900;
+            border-style: solid;
+            border-width: 3px;
+            border-radius: 8px;
+            outline: none;
+            transition: 0.2s;
+            /* Supprime les flèches du input number sur certains navigateurs pour le look */
+            -moz-appearance: textfield; 
+        }
+        .input-point::-webkit-outer-spin-button,
+        .input-point::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Style Équipe OR */
+        .input-gold {
+            border-color: var(--gold);
+            color: #997b2c;
+            background-color: rgba(204, 164, 59, 0.1); /* Fond doré très clair */
+        }
+        .input-gold:focus {
+            background-color: #fff;
+            box-shadow: 0 0 8px rgba(204, 164, 59, 0.4);
+        }
+        .input-gold::placeholder { color: rgba(204, 164, 59, 0.5); font-size: 12px; font-weight: normal;}
+
+        /* Style Équipe ARGENT */
+        .input-silver {
+            border-color: var(--silver);
+            color: #56626f;
+            background-color: rgba(112, 128, 144, 0.15); /* Fond argent très clair */
+        }
+        .input-silver:focus {
+            background-color: #fff;
+            box-shadow: 0 0 8px rgba(112, 128, 144, 0.4);
+        }
+        .input-silver::placeholder { color: rgba(112, 128, 144, 0.5); font-size: 12px; font-weight: normal;}
+
         /* Statuts */
         .status { font-size: 10px; font-weight: bold; margin-bottom: 5px; padding: 3px 8px; border-radius: 4px; display: inline-block; width: fit-content; text-transform: uppercase; }
         .status.done { background-color: #d4edda; color: #155724; }
         .status.todo { background-color: #f8d7da; color: #721c24; }
-        .status.winner-gold { background-color: #fff3cd; color: #856404; border: 1px solid var(--gold); }
-        .status.winner-silver { background-color: #d6d8db; color: #383d41; border: 1px solid var(--silver); }
 
         /* Admin Controls */
         .admin-controls { margin-top: 10px; border-top: 1px solid #f0f0f0; padding-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
@@ -128,15 +179,9 @@
         }
         .btn-validate { background: var(--success); }
         .btn-cancel { background: var(--fail); }
-        .btn-gold { background: var(--gold); }
-        .btn-silver { background: var(--silver); }
-        .btn-reset { background: #95a5a6; }
-
+        
         .btn-validate:hover { background: #219150; color: #eafaf1; }
         .btn-cancel:hover { background: #a93226; color: #fff0f0; }
-        .btn-gold:hover { background: #b38a2e; color: #fffbe6; }
-        .btn-silver:hover { background: #55606a; color: #f4f4f4; }
-        .btn-reset:hover { background: #7f8c8d; color: #f4f4f4; }
 
         /* Navigation Tabs */
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -2px 15px rgba(0,0,0,0.1); z-index: 100; border-top: 1px solid #eee; }
@@ -256,9 +301,9 @@
         ];
 
         const initialGames = [
-            { id: 'g1', name: "Essayer de ne pas rire (1pt / duel)", winner: null },
-            { id: 'g2', name: "Jeu de ballons", winner: null },
-            { id: 'g4', name: "Beer Pong", winner: null }
+            { id: 'g1', name: "Essayer de ne pas rire (1pt / duel)", points: { team1: 0, team2: 0 } },
+            { id: 'g2', name: "Jeu de ballons", points: { team1: 0, team2: 0 } },
+            { id: 'g4', name: "Beer Pong", points: { team1: 0, team2: 0 } }
         ];
 
         let appState = {
@@ -270,25 +315,17 @@
 
         // --- AUTH ---
         function attemptLogin() {
-            // Si on appelle la fonction sans arguments (depuis le bouton), on prend les valeurs des champs
-            // Si on l'appelle depuis l'auto-login (voir plus bas), on peut passer outre
-            
             let role = document.getElementById('role-select').value;
             let pass = document.getElementById('password-input').value;
             
-            // Vérification spéciale pour l'auto-login
             const savedRole = localStorage.getItem('mySavedRole');
             if (savedRole && !role) { 
-                // Si on a un rôle sauvegardé et qu'on essaie de se reconnecter auto
                 role = savedRole;
-                // On "fake" le mot de passe car on est déjà validé
                 pass = CREDENTIALS[role]; 
             }
 
             if (CREDENTIALS[role] && CREDENTIALS[role] === pass) {
                 currentUserRole = role;
-                
-                // SAUVEGARDE DE LA SESSION ICI
                 localStorage.setItem('mySavedRole', role);
 
                 document.getElementById('login-screen').style.display = 'none';
@@ -305,7 +342,7 @@
 
         function logout() {
             currentUserRole = null;
-            localStorage.removeItem('mySavedRole'); // ON OUBLIE QUI C'ETAIT
+            localStorage.removeItem('mySavedRole'); 
             document.getElementById('password-input').value = '';
             document.getElementById('app-view').style.display = 'none';
             document.getElementById('login-screen').style.display = 'flex';
@@ -371,17 +408,16 @@
 
         function renderScoreBoard() {
             let s1 = 0, s2 = 0;
-            
             appState.challenges.forEach(c => {
                 if(c.done && c.team === 'team1') s1++;
                 if(c.done && c.team === 'team2') s2++;
             });
-
             appState.games.forEach(g => {
-                if(g.winner === 'team1') s1 += 3; 
-                if(g.winner === 'team2') s2 += 3;
+                if (g.points) {
+                    s1 += Number(g.points.team1) || 0;
+                    s2 += Number(g.points.team2) || 0;
+                }
             });
-
             document.getElementById('score-gold').innerText = s1;
             document.getElementById('score-silver').innerText = s2;
         }
@@ -389,31 +425,30 @@
         function renderGamesList() {
             const container = document.getElementById('games-list');
             container.innerHTML = '';
-
             appState.games.forEach(game => {
+                if (!game.points) {
+                    game.points = { team1: 0, team2: 0 };
+                }
+                
                 let html = `<div class="card" style="border-left: 5px solid #555;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>${game.name}</h3>
-                        ${getWinnerBadge(game.winner)}
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <h3 style="margin-top:5px;">${game.name}</h3>
+                        <span style="font-size:11px; color:#aaa; font-weight:normal; margin-left:10px; white-space:nowrap;">
+                            Or: ${game.points.team1} | Arg: ${game.points.team2}
+                        </span>
                     </div>`;
                 
+                // MODIFICATION : Inputs placés sous le titre, stylisés, sans labels
                 if (currentUserRole === 'admin') {
-                    html += `<div class="admin-controls">
-                        <span style="font-size:10px; color:#aaa; align-self:center;">Vainqueur :</span>
-                        <button class="btn-mini btn-gold" onclick="setGameWinner('${game.id}', 'team1')">OR</button>
-                        <button class="btn-mini btn-silver" onclick="setGameWinner('${game.id}', 'team2')">ARG</button>
-                        <button class="btn-mini btn-reset" onclick="setGameWinner('${game.id}', null)">X</button>
+                    html += `<div class="game-inputs-row">
+                        <input class="input-point input-gold" type="number" min="0" max="99" value="${game.points.team1}" placeholder="Or" onchange="setGamePoints('${game.id}', 'team1', this.value)">
+                        <input class="input-point input-silver" type="number" min="0" max="99" value="${game.points.team2}" placeholder="Arg" onchange="setGamePoints('${game.id}', 'team2', this.value)">
                     </div>`;
                 }
+                
                 html += `</div>`;
                 container.innerHTML += html;
             });
-        }
-
-        function getWinnerBadge(w) {
-            if(w === 'team1') return `<span class="status winner-gold">★ OR</span>`;
-            if(w === 'team2') return `<span class="status winner-silver">ARGENT ✦</span>`;
-            return `<span class="status todo" style="background:#eee; color:#999;">À venir</span>`;
         }
 
         function renderChallengesList() {
@@ -473,10 +508,10 @@
             }
         }
 
-        function setGameWinner(id, winner) {
+        function setGamePoints(id, team, value) {
             const index = appState.games.findIndex(g => g.id === id);
             if (index !== -1) {
-                appState.games[index].winner = winner;
+                appState.games[index].points[team] = Number(value) || 0;
                 saveData();
             }
         }
@@ -489,11 +524,10 @@
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             if(element) element.classList.add('active');
         }
-        // --- AUTO LOGIN AU CHARGEMENT ---
+        
         window.onload = function() {
             const savedRole = localStorage.getItem('mySavedRole');
             if (savedRole) {
-                // Masquer immédiatement l'écran de login pour éviter le flash
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-view').style.display = 'block';
                 currentUserRole = savedRole;
