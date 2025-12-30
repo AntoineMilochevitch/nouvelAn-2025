@@ -211,8 +211,8 @@
             <h3 style="text-transform: uppercase; font-size: 14px; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 15px;">Épreuves Communes</h3>
             <div id="games-list"></div>
             
-            <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #999;">
-                Le score se met à jour automatiquement après chaque validation.
+            <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #bbb;">
+                Mise à jour automatique toutes les 4 sec.
             </div>
         </div>
 
@@ -291,7 +291,9 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-view').style.display = 'block';
                 document.getElementById('user-role-display').innerText = "Connecté : " + role.toUpperCase();
-                syncData(); 
+                
+                // Premier sync avec loader
+                syncData(true); 
             } else {
                 const err = document.getElementById('login-error');
                 err.style.display = 'block';
@@ -308,14 +310,25 @@
         }
 
         // --- SYNC PANTRY ---
-        async function syncData(forceUIUpdate = true) {
-            document.getElementById('loader').style.display = 'flex';
+        // Modification importante : argument "showLoader"
+        async function syncData(showLoader = true) {
+            if(showLoader) {
+                document.getElementById('loader').style.display = 'flex';
+            }
+            
             const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
+
             try {
-                const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
                 if (response.ok) {
                     const data = await response.json();
-                    if (data && data.challenges) appState = data;
+                    if (data && data.challenges) {
+                        appState = data;
+                    }
                 } else {
                     await saveData(false); 
                 }
@@ -323,12 +336,18 @@
                 const local = localStorage.getItem(BASKET_NAME);
                 if(local) appState = JSON.parse(local);
             }
-            if(forceUIUpdate) renderAll();
-            document.getElementById('loader').style.display = 'none';
+            
+            renderAll();
+            
+            if(showLoader) {
+                document.getElementById('loader').style.display = 'none';
+            }
         }
 
         async function saveData(updateUI = true) {
+            // Sauvegarde déclenche souvent un état de chargement, on le laisse
             document.getElementById('loader').style.display = 'flex';
+            
             const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
             localStorage.setItem(BASKET_NAME, JSON.stringify(appState));
             try {
@@ -338,6 +357,7 @@
                     body: JSON.stringify(appState)
                 });
             } catch (e) { console.error(e); }
+            
             if(updateUI) renderAll(); 
             document.getElementById('loader').style.display = 'none';
         }
@@ -367,6 +387,9 @@
 
         function renderGamesList() {
             const container = document.getElementById('games-list');
+            
+            // On conserve la position du scroll si possible, sinon c'est pas grave
+            // Mais on vide pour re-rendre
             container.innerHTML = '';
             
             if (currentUserRole === 'admin') {
@@ -407,6 +430,9 @@
                 html += `</div>`;
                 
                 if (currentUserRole === 'admin') {
+                    // Attention: quand on tape dans l'input, si l'auto-refresh passe, on perd le focus.
+                    // Solution simple: on ne re-rend pas l'input s'il a le focus (trop complexe ici)
+                    // Ou on accepte que l'admin doit taper, valider (change) avant le refresh.
                     html += `<div class="game-inputs-row">
                         <input class="input-point input-gold" type="number" min="0" max="99" value="${game.points.team1}" placeholder="Or" onchange="setGamePoints('${game.id}', 'team1', this.value)">
                         <input class="input-point input-silver" type="number" min="0" max="99" value="${game.points.team2}" placeholder="Arg" onchange="setGamePoints('${game.id}', 'team2', this.value)">
@@ -539,6 +565,18 @@
             if(element) element.classList.add('active');
         }
         
+        // --- BOUCLE D'ACTUALISATION AUTO (toutes les 4s) ---
+        setInterval(() => {
+            if (currentUserRole) {
+                // On met false pour NE PAS afficher le loader (silencieux)
+                // Attention : ne pas rafraichir si l'utilisateur est en train de taper dans un input !
+                // (Detection basique de focus)
+                if (document.activeElement.tagName !== "INPUT") {
+                    syncData(false);
+                }
+            }
+        }, 4000);
+
         window.onload = function() {
             const savedRole = localStorage.getItem('mySavedRole');
             if (savedRole) {
@@ -546,7 +584,8 @@
                 document.getElementById('app-view').style.display = 'block';
                 currentUserRole = savedRole;
                 document.getElementById('user-role-display').innerText = "Connecté : " + savedRole.toUpperCase();
-                syncData();
+                // Premier chargement avec loader visible
+                syncData(true);
             }
         };
     </script>
