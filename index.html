@@ -191,9 +191,7 @@
         const initialGames = [
             { id: 'g1', name: "Essayer de ne pas rire (1pt / duel)", winner: null },
             { id: 'g2', name: "Jeu de ballons", winner: null },
-            { id: 'g3', name: "Blind Test", winner: null },
-            { id: 'g4', name: "Beer Pong", winner: null },
-            { id: 'g5', name: "Jeu Bonus", winner: null }
+            { id: 'g4', name: "Beer Pong", winner: null }
         ];
 
         let appState = {
@@ -428,10 +426,12 @@
         window.onload = function() {
             const savedRole = localStorage.getItem('mySavedRole');
             if (savedRole) {
-                // On remplit le select pour que la logique fonctionne
-                document.getElementById('role-select').value = savedRole;
-                // On tente la connexion directement
-                attemptLogin();
+                // Masquer immédiatement l'écran de login pour éviter le flash
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-view').style.display = 'block';
+                currentUserRole = savedRole;
+                document.getElementById('user-role-display').innerText = "Connecté : " + savedRole.toUpperCase();
+                syncData();
             }
         };
     </script>
