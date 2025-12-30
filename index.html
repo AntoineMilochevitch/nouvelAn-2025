@@ -266,11 +266,12 @@
         function attemptLogin() {
             let role = document.getElementById('role-select').value;
             let pass = document.getElementById('password-input').value;
-            
+
+            // Si auto-login (après refresh), on prend le mot de passe automatiquement
             const savedRole = localStorage.getItem('mySavedRole');
-            if (savedRole && !role) { 
+            if (savedRole && (!role || role === savedRole)) {
                 role = savedRole;
-                pass = CREDENTIALS[role]; 
+                pass = CREDENTIALS[role];
             }
 
             if (CREDENTIALS[role] && CREDENTIALS[role] === pass) {
@@ -279,7 +280,7 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-view').style.display = 'block';
                 document.getElementById('user-role-display').innerText = "Connecté : " + role.toUpperCase();
-                
+
                 // Si c'est l'écran géant, on ajoute une classe au body pour le style
                 if (role === 'display') {
                     document.body.classList.add('role-display');
@@ -287,7 +288,7 @@
                     document.body.classList.remove('role-display');
                 }
 
-                syncData(true); 
+                syncData(true);
             } else {
                 const err = document.getElementById('login-error');
                 err.style.display = 'block';
@@ -555,9 +556,8 @@
         window.onload = function() {
             const savedRole = localStorage.getItem('mySavedRole');
             if (savedRole) {
-                // Pour l'auto-login, on force la vérification du select et du pass stocké en dur si besoin
-                // Mais ici on fait plus simple : on set le select et on simule le clic
                 document.getElementById('role-select').value = savedRole;
+                // On tente l'auto-login sans exiger le mot de passe
                 attemptLogin();
             }
         };
