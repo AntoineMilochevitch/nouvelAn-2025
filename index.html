@@ -160,6 +160,18 @@
         }
         .input-silver::placeholder { color: rgba(112, 128, 144, 0.5); font-size: 12px; font-weight: normal;}
 
+        /* Admin Add Cards */
+        .admin-add-card {
+            background-color: #f9f9f9;
+            border-left: 6px solid #444;
+        }
+        .admin-add-card h3 {
+            color: #555;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
         /* Statuts */
         .status { font-size: 10px; font-weight: bold; margin-bottom: 5px; padding: 3px 8px; border-radius: 4px; display: inline-block; width: fit-content; text-transform: uppercase; }
         .status.done { background-color: #d4edda; color: #155724; }
@@ -179,9 +191,11 @@
         }
         .btn-validate { background: var(--success); }
         .btn-cancel { background: var(--fail); }
+        .btn-dark { background: #444; }
         
         .btn-validate:hover { background: #219150; color: #eafaf1; }
         .btn-cancel:hover { background: #a93226; color: #fff0f0; }
+        .btn-dark:hover { background: #222; }
 
         /* Navigation Tabs */
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -2px 15px rgba(0,0,0,0.1); z-index: 100; border-top: 1px solid #eee; }
@@ -280,7 +294,6 @@
 
         // Données Initiales
         const initialChallenges = [
-            // EQUIPE 1 (Or)
             { id: 1, team: 'team1', text: "Faire en sorte qu'un adversaire te complimente sur tes fesses", done: false },
             { id: 2, team: 'team1', text: "Réussir à se faire servir à boire par un membre de l'équipe adverse en lui parlant comme à un chien/serviteur", done: false },
             { id: 3, team: 'team1', text: "Prendre une photo des pieds d'un adversaire (avec flash)", done: false },
@@ -289,8 +302,6 @@
             { id: 6, team: 'team1', text: "Pendant une conversation sérieuse, lâcher une insulte gratuite et méchante", done: false },
             { id: 7, team: 'team1', text: "Appeler un adversaire 'Bébé', 'Mon amour' ou 'Daddy' pendant 10 min", done: false },
             { id: 8, team: 'team1', text: "Manger une chips ou un toast en regardant un adversaire dans les yeux et en gémissant de plaisir", done: false },
-            
-            // EQUIPE 2 (Argent)
             { id: 9, team: 'team2', text: "Convaincre un adversaire de faire une story avec toi où vous criez 'VIVE LA SODOMIE'", done: false },
             { id: 10, team: 'team2', text: "Aller faire un bisou sur le crâne de tous les chauves", done: false },
             { id: 11, team: 'team2', text: "Pendant 10 min, quand un adversaire dit 'Non', crier 'OH OUI !' ou 'PLUS FORT !'", done: false },
@@ -425,6 +436,19 @@
         function renderGamesList() {
             const container = document.getElementById('games-list');
             container.innerHTML = '';
+            
+            // --- AJOUT NOUVELLE EPREUVE (ADMIN SEULEMENT) ---
+            if (currentUserRole === 'admin') {
+                container.innerHTML += `
+                <div class="card admin-add-card">
+                    <h3>+ Ajouter une Épreuve</h3>
+                    <div style="display:flex; gap:10px;">
+                        <input id="new-game-name" type="text" placeholder="Nom de l'épreuve..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px; margin:0;">
+                        <button class="btn-mini btn-dark" onclick="addGame()">Ajouter</button>
+                    </div>
+                </div>`;
+            }
+
             appState.games.forEach(game => {
                 if (!game.points) {
                     game.points = { team1: 0, team2: 0 };
@@ -438,7 +462,6 @@
                         </span>
                     </div>`;
                 
-                // MODIFICATION : Inputs placés sous le titre, stylisés, sans labels
                 if (currentUserRole === 'admin') {
                     html += `<div class="game-inputs-row">
                         <input class="input-point input-gold" type="number" min="0" max="99" value="${game.points.team1}" placeholder="Or" onchange="setGamePoints('${game.id}', 'team1', this.value)">
@@ -454,6 +477,22 @@
         function renderChallengesList() {
             const container = document.getElementById('challenges-list');
             container.innerHTML = '';
+            
+            // --- AJOUT NOUVEAU DEFI (ADMIN SEULEMENT) ---
+            if (currentUserRole === 'admin') {
+                container.innerHTML += `
+                <div class="card admin-add-card">
+                    <h3>+ Ajouter un Défi</h3>
+                    <input id="new-challenge-text" type="text" placeholder="Description du défi..." style="width:100%; box-sizing:border-box; padding:8px; margin:0 0 10px 0; border:1px solid #ddd; border-radius:4px;">
+                    <div style="display:flex; gap:10px;">
+                        <select id="new-challenge-team" style="padding:8px; flex:1; margin:0; border:1px solid #ddd; border-radius:4px;">
+                            <option value="team1">Pour Équipe 1 (Or)</option>
+                            <option value="team2">Pour Équipe 2 (Argent)</option>
+                        </select>
+                        <button class="btn-mini btn-dark" onclick="addChallenge()">Ajouter</button>
+                    </div>
+                </div>`;
+            }
 
             let list = [];
             
@@ -465,8 +504,8 @@
                 list = appState.challenges.filter(c => c.team === 'team2');
             }
 
-            if(list.length === 0) {
-                container.innerHTML = "<div style='text-align:center; color:#999;'>Aucun défi visible.</div>";
+            if(list.length === 0 && currentUserRole !== 'admin') {
+                container.innerHTML += "<div style='text-align:center; color:#999;'>Aucun défi visible.</div>";
                 return;
             }
 
@@ -514,6 +553,37 @@
                 appState.games[index].points[team] = Number(value) || 0;
                 saveData();
             }
+        }
+        
+        // --- FONCTIONS D'AJOUT (Nouvelles) ---
+        function addGame() {
+            const nameInput = document.getElementById('new-game-name');
+            const name = nameInput.value.trim();
+            if (!name) return alert("Il faut un nom !");
+            
+            const newId = 'g-' + Date.now();
+            appState.games.push({
+                id: newId,
+                name: name,
+                points: { team1: 0, team2: 0 }
+            });
+            saveData();
+        }
+
+        function addChallenge() {
+            const textInput = document.getElementById('new-challenge-text');
+            const teamInput = document.getElementById('new-challenge-team');
+            const text = textInput.value.trim();
+            if (!text) return alert("Il faut une description !");
+
+            const newId = Date.now();
+            appState.challenges.push({
+                id: newId,
+                team: teamInput.value,
+                text: text,
+                done: false
+            });
+            saveData();
         }
 
         function switchTab(tabName, element) {
