@@ -205,11 +205,27 @@
 
         // --- AUTH ---
         function attemptLogin() {
-            const role = document.getElementById('role-select').value;
-            const pass = document.getElementById('password-input').value;
+            // Si on appelle la fonction sans arguments (depuis le bouton), on prend les valeurs des champs
+            // Si on l'appelle depuis l'auto-login (voir plus bas), on peut passer outre
+            
+            let role = document.getElementById('role-select').value;
+            let pass = document.getElementById('password-input').value;
+            
+            // Vérification spéciale pour l'auto-login
+            const savedRole = localStorage.getItem('mySavedRole');
+            if (savedRole && !role) { 
+                // Si on a un rôle sauvegardé et qu'on essaie de se reconnecter auto
+                role = savedRole;
+                // On "fake" le mot de passe car on est déjà validé
+                pass = CREDENTIALS[role]; 
+            }
 
             if (CREDENTIALS[role] && CREDENTIALS[role] === pass) {
                 currentUserRole = role;
+                
+                // SAUVEGARDE DE LA SESSION ICI
+                localStorage.setItem('mySavedRole', role);
+
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-view').style.display = 'block';
                 document.getElementById('user-role-display').innerText = "Connecté : " + role.toUpperCase();
@@ -222,9 +238,9 @@
             }
         }
 
-        // --- LOGOUT ---
         function logout() {
             currentUserRole = null;
+            localStorage.removeItem('mySavedRole'); // ON OUBLIE QUI C'ETAIT
             document.getElementById('password-input').value = '';
             document.getElementById('app-view').style.display = 'none';
             document.getElementById('login-screen').style.display = 'flex';
@@ -408,7 +424,16 @@
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             if(element) element.classList.add('active');
         }
-
+        // --- AUTO LOGIN AU CHARGEMENT ---
+        window.onload = function() {
+            const savedRole = localStorage.getItem('mySavedRole');
+            if (savedRole) {
+                // On remplit le select pour que la logique fonctionne
+                document.getElementById('role-select').value = savedRole;
+                // On tente la connexion directement
+                attemptLogin();
+            }
+        };
     </script>
 </body>
 </html>
